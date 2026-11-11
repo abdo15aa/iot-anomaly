@@ -14,10 +14,9 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
 import influxdb_client
-from influxdb_client.client.write_api import SYNCHRONOUS
 import paho.mqtt.client as mqtt
-
 from detectors import BaseDetector, create_detector
+from influxdb_client.client.write_api import SYNCHRONOUS
 
 # Configure structured logging
 logging.basicConfig(
@@ -219,7 +218,7 @@ class TelemetryIngestor:
                     record=point,
                 )
         except Exception as err:
-            logger.error("Error ingesting message from %s: %s", message.topic, err, exc_info=True)
+            logger.exception("Error ingesting message from %s: %s", message.topic, err)
 
     def start(self) -> None:
         """Start the ingestor pipeline."""
