@@ -45,24 +45,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: actions/docker-buildx-action@v3
-
       - name: Validate Docker Compose Config
         run: |
           cp .env.example .env
           docker compose config
 
       - name: Build Simulator Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./simulator
-          push: false
-          tags: iot-anomaly-simulator:latest
+        run: |
+          docker build -t iot-anomaly-simulator:latest ./simulator
 
       - name: Build Ingestor Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./ingestor
-          push: false
-          tags: iot-anomaly-ingestor:latest
+        run: |
+          docker build -t iot-anomaly-ingestor:latest ./ingestor
