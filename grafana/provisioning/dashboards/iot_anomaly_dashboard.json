@@ -27,7 +27,7 @@
             "steps": [
               { "color": "green", "value": null },
               { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 5 }
+              { "color": "red", "value": 10 }
             ]
           },
           "unit": "short"
@@ -38,11 +38,11 @@
       "id": 1,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["sum"],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -52,7 +52,7 @@
       "targets": [
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\")\n  |> sum()",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\")\n  |> group()\n  |> sum()",
           "refId": "A"
         }
       ],
@@ -83,7 +83,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["count"],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -93,7 +93,7 @@
       "targets": [
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> group(columns: [\"machine_id\"])\n  |> distinct(column: \"machine_id\")",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> keep(columns: [\"machine_id\"])\n  |> group()\n  |> distinct(column: \"machine_id\")\n  |> count()",
           "refId": "A"
         }
       ],
@@ -106,7 +106,6 @@
         "defaults": {
           "color": { "mode": "thresholds" },
           "mappings": [],
-          "max": 10,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -125,7 +124,7 @@
       "options": {
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["max"],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -136,7 +135,7 @@
       "targets": [
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"anomaly_score\")\n  |> max()",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"_field\"] == \"anomaly_score\")\n  |> group()\n  |> max()",
           "refId": "A"
         }
       ],
@@ -159,19 +158,35 @@
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": false
+            "showPoints": "never",
+            "spanNulls": true
           },
           "unit": "celsius"
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "is_anomaly" },
+            "matcher": { "id": "byName", "options": "machine_1" },
             "properties": [
+              { "id": "color", "value": { "fixedColor": "#3274D9", "mode": "fixed" } },
+              { "id": "custom.lineWidth", "value": 2 },
+              { "id": "custom.drawStyle", "value": "line" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "machine_2" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } },
+              { "id": "custom.lineWidth", "value": 2 },
+              { "id": "custom.drawStyle", "value": "line" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "anomalies" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#E02F44", "mode": "fixed" } },
               { "id": "custom.drawStyle", "value": "points" },
-              { "id": "custom.pointSize", "value": 10 },
-              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
-              { "id": "custom.axisPlacement", "value": "right" }
+              { "id": "custom.pointSize", "value": 8 },
+              { "id": "custom.lineWidth", "value": 0 }
             ]
           }
         ]
@@ -179,18 +194,18 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
       "id": 4,
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" },
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "none" }
       },
       "targets": [
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"temperature\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"temperature\")",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"temperature\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.machine_id }))\n  |> group(columns: [\"_field\"])",
           "refId": "A"
         },
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"temperature\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\")\n  |> filter(fn: (r) => r[\"_value\"] == 1)\n  |> yield(name: \"anomalies\")",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"temperature\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\" or r[\"_field\"] == \"is_anomaly\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"is_anomaly\"] == 1)\n  |> map(fn: (r) => ({ r with _field: \"anomalies\", _value: r.value }))\n  |> group(columns: [\"_field\"])",
           "refId": "B"
         }
       ],
@@ -206,19 +221,35 @@
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": false
+            "showPoints": "never",
+            "spanNulls": true
           },
-          "unit": "velocitykms"
+          "unit": "mm/s"
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "is_anomaly" },
+            "matcher": { "id": "byName", "options": "machine_1" },
             "properties": [
+              { "id": "color", "value": { "fixedColor": "#3274D9", "mode": "fixed" } },
+              { "id": "custom.lineWidth", "value": 2 },
+              { "id": "custom.drawStyle", "value": "line" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "machine_2" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } },
+              { "id": "custom.lineWidth", "value": 2 },
+              { "id": "custom.drawStyle", "value": "line" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "anomalies" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#E02F44", "mode": "fixed" } },
               { "id": "custom.drawStyle", "value": "points" },
-              { "id": "custom.pointSize", "value": 10 },
-              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
-              { "id": "custom.axisPlacement", "value": "right" }
+              { "id": "custom.pointSize", "value": 8 },
+              { "id": "custom.lineWidth", "value": 0 }
             ]
           }
         ]
@@ -226,18 +257,18 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
       "id": 5,
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" },
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "none" }
       },
       "targets": [
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"vibration\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"vibration\")",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"vibration\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.machine_id }))\n  |> group(columns: [\"_field\"])",
           "refId": "A"
         },
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"vibration\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\")\n  |> filter(fn: (r) => r[\"_value\"] == 1)\n  |> yield(name: \"anomalies\")",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"vibration\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\" or r[\"_field\"] == \"is_anomaly\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"is_anomaly\"] == 1)\n  |> map(fn: (r) => ({ r with _field: \"anomalies\", _value: r.value }))\n  |> group(columns: [\"_field\"])",
           "refId": "B"
         }
       ],
@@ -253,19 +284,35 @@
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": false
+            "showPoints": "never",
+            "spanNulls": true
           },
           "unit": "bar"
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "is_anomaly" },
+            "matcher": { "id": "byName", "options": "machine_1" },
             "properties": [
+              { "id": "color", "value": { "fixedColor": "#3274D9", "mode": "fixed" } },
+              { "id": "custom.lineWidth", "value": 2 },
+              { "id": "custom.drawStyle", "value": "line" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "machine_2" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } },
+              { "id": "custom.lineWidth", "value": 2 },
+              { "id": "custom.drawStyle", "value": "line" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "anomalies" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#E02F44", "mode": "fixed" } },
               { "id": "custom.drawStyle", "value": "points" },
-              { "id": "custom.pointSize", "value": 10 },
-              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
-              { "id": "custom.axisPlacement", "value": "right" }
+              { "id": "custom.pointSize", "value": 8 },
+              { "id": "custom.lineWidth", "value": 0 }
             ]
           }
         ]
@@ -273,18 +320,18 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
       "id": 6,
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" },
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "none" }
       },
       "targets": [
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"pressure\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"pressure\")",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"pressure\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.machine_id }))\n  |> group(columns: [\"_field\"])",
           "refId": "A"
         },
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"pressure\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\")\n  |> filter(fn: (r) => r[\"_value\"] == 1)\n  |> yield(name: \"anomalies\")",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"pressure\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\" or r[\"_field\"] == \"is_anomaly\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"is_anomaly\"] == 1)\n  |> map(fn: (r) => ({ r with _field: \"anomalies\", _value: r.value }))\n  |> group(columns: [\"_field\"])",
           "refId": "B"
         }
       ],
@@ -300,19 +347,35 @@
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": false
+            "showPoints": "never",
+            "spanNulls": true
           },
           "unit": "percent"
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "is_anomaly" },
+            "matcher": { "id": "byName", "options": "machine_1" },
             "properties": [
+              { "id": "color", "value": { "fixedColor": "#3274D9", "mode": "fixed" } },
+              { "id": "custom.lineWidth", "value": 2 },
+              { "id": "custom.drawStyle", "value": "line" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "machine_2" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } },
+              { "id": "custom.lineWidth", "value": 2 },
+              { "id": "custom.drawStyle", "value": "line" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "anomalies" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#E02F44", "mode": "fixed" } },
               { "id": "custom.drawStyle", "value": "points" },
-              { "id": "custom.pointSize", "value": 10 },
-              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
-              { "id": "custom.axisPlacement", "value": "right" }
+              { "id": "custom.pointSize", "value": 8 },
+              { "id": "custom.lineWidth", "value": 0 }
             ]
           }
         ]
@@ -320,18 +383,18 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
       "id": 7,
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" },
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "none" }
       },
       "targets": [
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"humidity\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"humidity\")",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"humidity\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.machine_id }))\n  |> group(columns: [\"_field\"])",
           "refId": "A"
         },
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"humidity\")\n  |> filter(fn: (r) => r[\"_field\"] == \"is_anomaly\")\n  |> filter(fn: (r) => r[\"_value\"] == 1)\n  |> yield(name: \"anomalies\")",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"humidity\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\" or r[\"_field\"] == \"is_anomaly\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"is_anomaly\"] == 1)\n  |> map(fn: (r) => ({ r with _field: \"anomalies\", _value: r.value }))\n  |> group(columns: [\"_field\"])",
           "refId": "B"
         }
       ],
@@ -352,5 +415,5 @@
   "timezone": "browser",
   "title": "IoT Factory Telemetry & Anomaly Surveillance",
   "uid": "iot-telemetry-anomalies",
-  "version": 1
+  "version": 2
 }
