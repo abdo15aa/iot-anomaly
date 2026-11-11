@@ -161,28 +161,42 @@
             "showPoints": "never",
             "spanNulls": true
           },
+          "displayName": "${__field.labels.machine_id}${__field.labels.anomaly}",
           "unit": "celsius"
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "machine_1" },
+            "matcher": { "id": "byRegexp", "options": "/(?<!anomalie.*)machine_1/" },
             "properties": [
+              { "id": "displayName", "value": "machine_1" },
               { "id": "color", "value": { "fixedColor": "#3274D9", "mode": "fixed" } },
               { "id": "custom.lineWidth", "value": 2 },
               { "id": "custom.drawStyle", "value": "line" }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "machine_2" },
+            "matcher": { "id": "byRegexp", "options": "/(?<!anomalie.*)machine_2/" },
             "properties": [
+              { "id": "displayName", "value": "machine_2" },
               { "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } },
               { "id": "custom.lineWidth", "value": 2 },
               { "id": "custom.drawStyle", "value": "line" }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "anomalies" },
+            "matcher": { "id": "byRegexp", "options": "/anomalie.*machine_1/" },
             "properties": [
+              { "id": "displayName", "value": "anomalie machine_1" },
+              { "id": "color", "value": { "fixedColor": "#E02F44", "mode": "fixed" } },
+              { "id": "custom.drawStyle", "value": "points" },
+              { "id": "custom.pointSize", "value": 8 },
+              { "id": "custom.lineWidth", "value": 0 }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/anomalie.*machine_2/" },
+            "properties": [
+              { "id": "displayName", "value": "anomalie machine_2" },
               { "id": "color", "value": { "fixedColor": "#E02F44", "mode": "fixed" } },
               { "id": "custom.drawStyle", "value": "points" },
               { "id": "custom.pointSize", "value": 8 },
@@ -200,12 +214,12 @@
       "targets": [
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"temperature\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.machine_id }))\n  |> group(columns: [\"_field\"])",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_telemetry\")\n  |> filter(fn: (r) => r.sensor_id == \"temperature\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group(columns: [\"machine_id\"])\n  |> keep(columns: [\"_time\", \"_value\", \"machine_id\"])",
           "refId": "A"
         },
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"temperature\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\" or r[\"_field\"] == \"is_anomaly\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"is_anomaly\"] == 1)\n  |> map(fn: (r) => ({ r with _field: \"anomalies\", _value: r.value }))\n  |> group(columns: [\"_field\"])",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_telemetry\")\n  |> filter(fn: (r) => r.sensor_id == \"temperature\")\n  |> filter(fn: (r) => r._field == \"value\" or r._field == \"is_anomaly\")\n  |> pivot(rowKey: [\"_time\", \"machine_id\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r.is_anomaly == 1)\n  |> map(fn: (r) => ({_time: r._time, _value: r.value, anomaly: \"anomalie \" + r.machine_id}))\n  |> group(columns: [\"anomaly\"])",
           "refId": "B"
         }
       ],
@@ -224,28 +238,42 @@
             "showPoints": "never",
             "spanNulls": true
           },
+          "displayName": "${__field.labels.machine_id}${__field.labels.anomaly}",
           "unit": "mm/s"
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "machine_1" },
+            "matcher": { "id": "byRegexp", "options": "/(?<!anomalie.*)machine_1/" },
             "properties": [
+              { "id": "displayName", "value": "machine_1" },
               { "id": "color", "value": { "fixedColor": "#3274D9", "mode": "fixed" } },
               { "id": "custom.lineWidth", "value": 2 },
               { "id": "custom.drawStyle", "value": "line" }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "machine_2" },
+            "matcher": { "id": "byRegexp", "options": "/(?<!anomalie.*)machine_2/" },
             "properties": [
+              { "id": "displayName", "value": "machine_2" },
               { "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } },
               { "id": "custom.lineWidth", "value": 2 },
               { "id": "custom.drawStyle", "value": "line" }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "anomalies" },
+            "matcher": { "id": "byRegexp", "options": "/anomalie.*machine_1/" },
             "properties": [
+              { "id": "displayName", "value": "anomalie machine_1" },
+              { "id": "color", "value": { "fixedColor": "#E02F44", "mode": "fixed" } },
+              { "id": "custom.drawStyle", "value": "points" },
+              { "id": "custom.pointSize", "value": 8 },
+              { "id": "custom.lineWidth", "value": 0 }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/anomalie.*machine_2/" },
+            "properties": [
+              { "id": "displayName", "value": "anomalie machine_2" },
               { "id": "color", "value": { "fixedColor": "#E02F44", "mode": "fixed" } },
               { "id": "custom.drawStyle", "value": "points" },
               { "id": "custom.pointSize", "value": 8 },
@@ -263,12 +291,12 @@
       "targets": [
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"vibration\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.machine_id }))\n  |> group(columns: [\"_field\"])",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_telemetry\")\n  |> filter(fn: (r) => r.sensor_id == \"vibration\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group(columns: [\"machine_id\"])\n  |> keep(columns: [\"_time\", \"_value\", \"machine_id\"])",
           "refId": "A"
         },
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"vibration\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\" or r[\"_field\"] == \"is_anomaly\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"is_anomaly\"] == 1)\n  |> map(fn: (r) => ({ r with _field: \"anomalies\", _value: r.value }))\n  |> group(columns: [\"_field\"])",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_telemetry\")\n  |> filter(fn: (r) => r.sensor_id == \"vibration\")\n  |> filter(fn: (r) => r._field == \"value\" or r._field == \"is_anomaly\")\n  |> pivot(rowKey: [\"_time\", \"machine_id\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r.is_anomaly == 1)\n  |> map(fn: (r) => ({_time: r._time, _value: r.value, anomaly: \"anomalie \" + r.machine_id}))\n  |> group(columns: [\"anomaly\"])",
           "refId": "B"
         }
       ],
@@ -287,28 +315,42 @@
             "showPoints": "never",
             "spanNulls": true
           },
+          "displayName": "${__field.labels.machine_id}${__field.labels.anomaly}",
           "unit": "bar"
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "machine_1" },
+            "matcher": { "id": "byRegexp", "options": "/(?<!anomalie.*)machine_1/" },
             "properties": [
+              { "id": "displayName", "value": "machine_1" },
               { "id": "color", "value": { "fixedColor": "#3274D9", "mode": "fixed" } },
               { "id": "custom.lineWidth", "value": 2 },
               { "id": "custom.drawStyle", "value": "line" }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "machine_2" },
+            "matcher": { "id": "byRegexp", "options": "/(?<!anomalie.*)machine_2/" },
             "properties": [
+              { "id": "displayName", "value": "machine_2" },
               { "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } },
               { "id": "custom.lineWidth", "value": 2 },
               { "id": "custom.drawStyle", "value": "line" }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "anomalies" },
+            "matcher": { "id": "byRegexp", "options": "/anomalie.*machine_1/" },
             "properties": [
+              { "id": "displayName", "value": "anomalie machine_1" },
+              { "id": "color", "value": { "fixedColor": "#E02F44", "mode": "fixed" } },
+              { "id": "custom.drawStyle", "value": "points" },
+              { "id": "custom.pointSize", "value": 8 },
+              { "id": "custom.lineWidth", "value": 0 }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/anomalie.*machine_2/" },
+            "properties": [
+              { "id": "displayName", "value": "anomalie machine_2" },
               { "id": "color", "value": { "fixedColor": "#E02F44", "mode": "fixed" } },
               { "id": "custom.drawStyle", "value": "points" },
               { "id": "custom.pointSize", "value": 8 },
@@ -326,12 +368,12 @@
       "targets": [
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"pressure\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.machine_id }))\n  |> group(columns: [\"_field\"])",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_telemetry\")\n  |> filter(fn: (r) => r.sensor_id == \"pressure\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group(columns: [\"machine_id\"])\n  |> keep(columns: [\"_time\", \"_value\", \"machine_id\"])",
           "refId": "A"
         },
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"pressure\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\" or r[\"_field\"] == \"is_anomaly\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"is_anomaly\"] == 1)\n  |> map(fn: (r) => ({ r with _field: \"anomalies\", _value: r.value }))\n  |> group(columns: [\"_field\"])",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_telemetry\")\n  |> filter(fn: (r) => r.sensor_id == \"pressure\")\n  |> filter(fn: (r) => r._field == \"value\" or r._field == \"is_anomaly\")\n  |> pivot(rowKey: [\"_time\", \"machine_id\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r.is_anomaly == 1)\n  |> map(fn: (r) => ({_time: r._time, _value: r.value, anomaly: \"anomalie \" + r.machine_id}))\n  |> group(columns: [\"anomaly\"])",
           "refId": "B"
         }
       ],
@@ -350,28 +392,42 @@
             "showPoints": "never",
             "spanNulls": true
           },
+          "displayName": "${__field.labels.machine_id}${__field.labels.anomaly}",
           "unit": "percent"
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "machine_1" },
+            "matcher": { "id": "byRegexp", "options": "/(?<!anomalie.*)machine_1/" },
             "properties": [
+              { "id": "displayName", "value": "machine_1" },
               { "id": "color", "value": { "fixedColor": "#3274D9", "mode": "fixed" } },
               { "id": "custom.lineWidth", "value": 2 },
               { "id": "custom.drawStyle", "value": "line" }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "machine_2" },
+            "matcher": { "id": "byRegexp", "options": "/(?<!anomalie.*)machine_2/" },
             "properties": [
+              { "id": "displayName", "value": "machine_2" },
               { "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } },
               { "id": "custom.lineWidth", "value": 2 },
               { "id": "custom.drawStyle", "value": "line" }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "anomalies" },
+            "matcher": { "id": "byRegexp", "options": "/anomalie.*machine_1/" },
             "properties": [
+              { "id": "displayName", "value": "anomalie machine_1" },
+              { "id": "color", "value": { "fixedColor": "#E02F44", "mode": "fixed" } },
+              { "id": "custom.drawStyle", "value": "points" },
+              { "id": "custom.pointSize", "value": 8 },
+              { "id": "custom.lineWidth", "value": 0 }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/anomalie.*machine_2/" },
+            "properties": [
+              { "id": "displayName", "value": "anomalie machine_2" },
               { "id": "color", "value": { "fixedColor": "#E02F44", "mode": "fixed" } },
               { "id": "custom.drawStyle", "value": "points" },
               { "id": "custom.pointSize", "value": 8 },
@@ -389,12 +445,12 @@
       "targets": [
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"humidity\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> map(fn: (r) => ({ r with _field: r.machine_id }))\n  |> group(columns: [\"_field\"])",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_telemetry\")\n  |> filter(fn: (r) => r.sensor_id == \"humidity\")\n  |> filter(fn: (r) => r._field == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group(columns: [\"machine_id\"])\n  |> keep(columns: [\"_time\", \"_value\", \"machine_id\"])",
           "refId": "A"
         },
         {
           "datasource": { "type": "influxdb", "uid": "InfluxDB_Flux" },
-          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_telemetry\")\n  |> filter(fn: (r) => r[\"sensor_id\"] == \"humidity\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\" or r[\"_field\"] == \"is_anomaly\")\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r[\"is_anomaly\"] == 1)\n  |> map(fn: (r) => ({ r with _field: \"anomalies\", _value: r.value }))\n  |> group(columns: [\"_field\"])",
+          "query": "from(bucket: \"sensor_telemetry\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"sensor_telemetry\")\n  |> filter(fn: (r) => r.sensor_id == \"humidity\")\n  |> filter(fn: (r) => r._field == \"value\" or r._field == \"is_anomaly\")\n  |> pivot(rowKey: [\"_time\", \"machine_id\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r.is_anomaly == 1)\n  |> map(fn: (r) => ({_time: r._time, _value: r.value, anomaly: \"anomalie \" + r.machine_id}))\n  |> group(columns: [\"anomaly\"])",
           "refId": "B"
         }
       ],
@@ -415,5 +471,5 @@
   "timezone": "browser",
   "title": "IoT Factory Telemetry & Anomaly Surveillance",
   "uid": "iot-telemetry-anomalies",
-  "version": 2
+  "version": 3
 }
