@@ -1,0 +1,138 @@
+services:
+  # ============================================================================
+  # MQTT Message Broker (Eclipse Mosquitto)
+  # ============================================================================
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: iot_mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/broker/version' -C 1 -i healthcheck || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+    networks:
+      - iot_network
+
+  # ============================================================================
+  # Time-Series Database (InfluxDB 2.x)
+  # ============================================================================
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: iot_influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${DOCKER_INFLUXDB_INIT_USERNAME:-admin}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${DOCKER_INFLUXDB_INIT_PASSWORD:-adminpassword123}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG:-iot_org}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET:-sensor_telemetry}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN:-iot-anomaly-secret-auth-token-987654321}
+      - DOCKER_INFLUXDB_INIT_RETENTION=${DOCKER_INFLUXDB_INIT_RETENTION:-7d}
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - iot_network
+
+  # ============================================================================
+  # Data Visualization & Dashboarding (Grafana)
+  # ============================================================================
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: iot_grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN:-iot-anomaly-secret-auth-token-987654321}
+      - INFLUXDB_ORG=${INFLUXDB_ORG:-iot_org}
+      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET:-sensor_telemetry}
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    networks:
+      - iot_network
+
+  # ============================================================================
+  # Python Ingestor & Anomaly Detector Service
+  # ============================================================================
+  ingestor:
+    build:
+      context: ./ingestor
+      dockerfile: Dockerfile
+    container_name: iot_ingestor
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MQTT_BROKER=${MQTT_BROKER:-mosquitto}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_TOPIC_PREFIX=${MQTT_TOPIC_PREFIX:-factory}
+      - INFLUXDB_URL=${INFLUXDB_URL:-http://influxdb:8086}
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN:-iot-anomaly-secret-auth-token-987654321}
+      - INFLUXDB_ORG=${INFLUXDB_ORG:-iot_org}
+      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET:-sensor_telemetry}
+      - INGESTOR_DETECTOR_TYPE=${INGESTOR_DETECTOR_TYPE:-zscore}
+      - ZSCORE_THRESHOLD=${ZSCORE_THRESHOLD:-3.0}
+      - ZSCORE_WINDOW_SIZE=${ZSCORE_WINDOW_SIZE:-30}
+      - IFOREST_WARMUP_SAMPLES=${IFOREST_WARMUP_SAMPLES:-40}
+      - IFOREST_CONTAMINATION=${IFOREST_CONTAMINATION:-0.05}
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+    networks:
+      - iot_network
+
+  # ============================================================================
+  # Python IoT Sensor Telemetry Simulator Service
+  # ============================================================================
+  simulator:
+    build:
+      context: ./simulator
+      dockerfile: Dockerfile
+    container_name: iot_simulator
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MQTT_BROKER=${MQTT_BROKER:-mosquitto}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_TOPIC_PREFIX=${MQTT_TOPIC_PREFIX:-factory}
+      - SIMULATOR_PUBLISH_INTERVAL_SEC=${SIMULATOR_PUBLISH_INTERVAL_SEC:-1.0}
+      - SIMULATOR_ANOMALY_RATE=${SIMULATOR_ANOMALY_RATE:-0.05}
+      - SIMULATOR_MACHINES=${SIMULATOR_MACHINES:-machine_1,machine_2}
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    networks:
+      - iot_network
+
+networks:
+  iot_network:
+    driver: bridge
+
+volumes:
+  mosquitto_data:
+  influxdb_data:
+  grafana_data:
